@@ -2,6 +2,8 @@
 // ARVERUZ GPS TRACKER - MULTI MAP PRO
 // ===============================
 
+Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
+
 const latElement = document.getElementById("lat");
 const lonElement = document.getElementById("lon");
 const accuracyElement = document.getElementById("accuracy");
