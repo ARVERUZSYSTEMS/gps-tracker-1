@@ -1,43 +1,67 @@
 // ===============================
-// ARVERUZ GPS TRACKER - PRO VERSION
+// ARVERUZ GPS TRACKER - MULTI MAP PRO
 // ===============================
 
-// Elementos del panel
 const latElement = document.getElementById("lat");
 const lonElement = document.getElementById("lon");
 const accuracyElement = document.getElementById("accuracy");
 
-// ===============================
-// Inicialización del mapa
-// ===============================
-
+// Inicializar mapa
 const map = L.map('map', {
-    zoomControl: false,      // Quitamos el zoom clásico
-    touchZoom: true,         // Zoom táctil activado
-    scrollWheelZoom: true,   // Zoom con rueda
-    doubleClickZoom: true,   // Doble clic zoom
+    zoomControl: false,
+    touchZoom: true,
+    scrollWheelZoom: true,
+    doubleClickZoom: true,
     dragging: true
-}).setView([0, 0], 2);       // Vista inicial global
+}).setView([0, 0], 2);
 
-// Zoom más suave (más profesional)
 map.options.zoomSnap = 0.25;
 map.options.zoomDelta = 0.25;
 
-// Capa del mapa (OpenStreetMap)
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
-}).addTo(map);
+// ===============================
+// CAPAS DE MAPA
+// ===============================
 
-// Agregar zoom estilo moderno abajo derecha
+// Mapa normal
+const normalLayer = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution: '© OpenStreetMap contributors' }
+);
+
+// Satélite (Esri)
+const satelliteLayer = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { attribution: 'Tiles © Esri' }
+);
+
+// Modo oscuro
+const darkLayer = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    { attribution: '&copy; CARTO' }
+);
+
+// Agregar capa inicial
+normalLayer.addTo(map);
+
+// Control de capas
+L.control.layers(
+    {
+        "Mapa Normal": normalLayer,
+        "Satélite": satelliteLayer,
+        "Modo Oscuro": darkLayer
+    }
+).addTo(map);
+
+// Zoom estilo moderno
 L.control.zoom({
     position: 'bottomright'
 }).addTo(map);
 
-// Marcador inicial
+// Marcador
 let marker = L.marker([0, 0]).addTo(map);
 
 // ===============================
-// Función para obtener ubicación
+// GEOLOCALIZACIÓN
 // ===============================
 
 function getLocation() {
@@ -46,56 +70,28 @@ function getLocation() {
             enableHighAccuracy: true
         });
     } else {
-        alert("Geolocalización no soportada por este navegador.");
+        alert("Geolocalización no soportada.");
     }
 }
-
-// ===============================
-// Mostrar posición en mapa
-// ===============================
 
 function showPosition(position) {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
     const accuracy = position.coords.accuracy;
 
-    // Actualizar panel
     latElement.textContent = lat.toFixed(6);
     lonElement.textContent = lon.toFixed(6);
     accuracyElement.textContent = accuracy.toFixed(1);
 
-    // Mover mapa
     map.setView([lat, lon], 15);
-
-    // Mover marcador
     marker.setLatLng([lat, lon]);
 }
 
-// ===============================
-// Manejo de errores
-// ===============================
-
 function showError(error) {
-    switch(error.code) {
-        case error.PERMISSION_DENIED:
-            alert("Permiso de ubicación denegado.");
-            break;
-        case error.POSITION_UNAVAILABLE:
-            alert("Información de ubicación no disponible.");
-            break;
-        case error.TIMEOUT:
-            alert("Tiempo de espera agotado.");
-            break;
-        default:
-            alert("Error desconocido.");
-            break;
-    }
+    alert("Error obteniendo ubicación.");
 }
 
-// ===============================
-// Obtener ubicación automática al cargar
-// ===============================
-
+// Obtener ubicación automática
 window.onload = function () {
     getLocation();
 };
