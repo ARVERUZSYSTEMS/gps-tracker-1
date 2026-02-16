@@ -3,32 +3,32 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>ARVERUZ GPS Tracker</title>
+    <title>ARVERUZ GPS 3D</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <!-- CESIUM JS -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 
     <!-- Tu CSS -->
     <link rel="stylesheet" href="style.css">
-
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 
 <body>
 
-    <div id="map"></div>
+    <div id="cesiumContainer"></div>
 
-   <div class="panel">
-    <h1>ARVERUZ GPS</h1>
-    <p>Lat: <span id="lat">--</span></p>
-    <p>Lng: <span id="lon">--</span></p>
-    <p>Prec: <span id="accuracy">--</span> m</p>
-    <button onclick="getLocation()">Actualizar</button>
-</div>
+    <div class="hud">
+        <strong>ARVERUZ GPS 3D</strong>
+        <span>Lat: <b id="lat">--</b></span>
+        <span>Lng: <b id="lon">--</b></span>
+        <span>Alt: <b id="alt">--</b></span>
+        <span>Prec: <b id="accuracy">--</b> m</span>
+        <button onclick="getLocation()">Ubicar</button>
+    </div>
 
-    <!-- Tu JavaScript -->
+    <!-- IMPORTANTE: primero config -->
+    <script src="config.js"></script>
     <script src="app.js"></script>
 
 </body>
