@@ -10,7 +10,7 @@ const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImYwNTA
 
 // Crear visor
 const viewer = new Cesium.Viewer("cesiumContainer", {
-    terrainProvider: Cesium.createWorldTerrain(),
+    terrain: Cesium.Terrain.fromWorldTerrain(),
     timeline: false,
     animation: false,
     baseLayerPicker: true,
@@ -19,6 +19,7 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     homeButton: true,
     geocoder: true
 });
+
 
 // Elementos HUD
 const latElement = document.getElementById("lat");
