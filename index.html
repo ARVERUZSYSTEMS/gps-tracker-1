@@ -1,35 +1,60 @@
-<!DOCTYPE html>
-<html lang="es">
+// ===============================
+// ARVERUZ GPS 3D - FUNCIONAL
+// ===============================
 
-<head>
-    <meta charset="UTF-8">
-    <title>ARVERUZ GPS 3D</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+// 🔑 PEGA TU TOKEN AQUÍ
+Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyNmEyMDhlNi1lNGIyLTQ2M2QtYjg2Yy1jN2JkY2ZhNzk0YzAiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzExOTc5MDB9.WV9HjMr5oC93_gpe0dUA0QrQkjbM7R8OX9ihdK_n-ZY";
 
-    <!-- CESIUM JS -->
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Cesium.js"></script>
-    <link href="https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+// Crear visor
+const viewer = new Cesium.Viewer("cesiumContainer", {
+    terrain: Cesium.Terrain.fromWorldTerrain(),
+    timeline: false,
+    animation: false
+});
 
-    <!-- Tu CSS -->
-    <link rel="stylesheet" href="style.css">
-</head>
+// Elementos HUD
+const latElement = document.getElementById("lat");
+const lonElement = document.getElementById("lon");
+const altElement = document.getElementById("alt");
+const accuracyElement = document.getElementById("accuracy");
 
-<body>
+// Marcador
+let entity = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(0, 0, 0),
+    point: {
+        pixelSize: 10,
+        color: Cesium.Color.RED
+    }
+});
 
-    <div id="cesiumContainer"></div>
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition);
+    }
+}
 
-    <div class="hud">
-        <strong>ARVERUZ GPS 3D</strong>
-        <span>Lat: <b id="lat">--</b></span>
-        <span>Lng: <b id="lon">--</b></span>
-        <span>Alt: <b id="alt">--</b></span>
-        <span>Prec: <b id="accuracy">--</b> m</span>
-        <button onclick="getLocation()">Ubicar</button>
-    </div>
+function showPosition(position) {
+    const lat = position.coords.latitude;
+    const lon = position.coords.longitude;
+    const alt = position.coords.altitude || 0;
+    const accuracy = position.coords.accuracy;
 
-    <!-- IMPORTANTE: primero config -->
-    <script src="app.js"></script>
+    latElement.textContent = lat.toFixed(6);
+    lonElement.textContent = lon.toFixed(6);
+    altElement.textContent = alt.toFixed(1);
+    accuracyElement.textContent = accuracy.toFixed(1);
 
-</body>
+    const cartesian = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+    entity.position = cartesian;
 
-</html>
+    viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1500),
+        orientation: {
+            pitch: Cesium.Math.toRadians(-45)
+        }
+    });
+}
+
+window.onload = function () {
+    getLocation();
+};
