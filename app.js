@@ -7,9 +7,14 @@ Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOi
 
 // Crear visor
 const viewer = new Cesium.Viewer("cesiumContainer", {
-    terrain: Cesium.Terrain.fromWorldTerrain(),
+    terrainProvider: Cesium.createWorldTerrain(),
     timeline: false,
-    animation: false
+    animation: false,
+    baseLayerPicker: true,
+    navigationHelpButton: true,
+    sceneModePicker: true,
+    homeButton: true,
+    geocoder: true
 });
 
 // Elementos HUD
