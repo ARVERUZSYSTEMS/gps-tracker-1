@@ -1,76 +1,35 @@
 // ===============================
-// ARVERUZ GPS TRACKER - MULTI MAP PRO
+// ARVERUZ GPS 3D - CESIUM VERSION
 // ===============================
 
-Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
+// 🔑 Pega tu token aquí directamente
+Cesium.Ion.defaultAccessToken = "PEGA_AQUI_TU_TOKEN_REAL";
 
+// Crear visor 3D
+const viewer = new Cesium.Viewer("cesiumContainer", {
+    terrainProvider: Cesium.createWorldTerrain(),
+    timeline: false,
+    animation: false
+});
+
+// HUD elementos
 const latElement = document.getElementById("lat");
 const lonElement = document.getElementById("lon");
+const altElement = document.getElementById("alt");
 const accuracyElement = document.getElementById("accuracy");
 
-// Inicializar mapa
-const map = L.map('map', {
-    zoomControl: false,
-    touchZoom: true,
-    scrollWheelZoom: true,
-    doubleClickZoom: true,
-    dragging: true
-}).setView([0, 0], 2);
-
-map.options.zoomSnap = 0.25;
-map.options.zoomDelta = 0.25;
-
-// ===============================
-// CAPAS DE MAPA
-// ===============================
-
-// Mapa normal
-const normalLayer = L.tileLayer(
-    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    { attribution: '© OpenStreetMap contributors' }
-);
-
-// Satélite (Esri)
-const satelliteLayer = L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    { attribution: 'Tiles © Esri' }
-);
-
-// Modo oscuro
-const darkLayer = L.tileLayer(
-    'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    { attribution: '&copy; CARTO' }
-);
-
-// Agregar capa inicial
-normalLayer.addTo(map);
-
-// Control de capas
-L.control.layers(
-    {
-        "Mapa Normal": normalLayer,
-        "Satélite": satelliteLayer,
-        "Modo Oscuro": darkLayer
-    }
-).addTo(map);
-
-// Zoom estilo moderno
-L.control.zoom({
-    position: 'bottomright'
-}).addTo(map);
-
 // Marcador
-let marker = L.marker([0, 0]).addTo(map);
-
-// ===============================
-// GEOLOCALIZACIÓN
-// ===============================
+let entity = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(0, 0, 0),
+    point: {
+        pixelSize: 10,
+        color: Cesium.Color.RED
+    }
+});
 
 function getLocation() {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(showPosition, showError, {
-            enableHighAccuracy: true
-        });
+        navigator.geolocation.getCurrentPosition(showPosition);
     } else {
         alert("Geolocalización no soportada.");
     }
@@ -79,21 +38,25 @@ function getLocation() {
 function showPosition(position) {
     const lat = position.coords.latitude;
     const lon = position.coords.longitude;
+    const alt = position.coords.altitude || 0;
     const accuracy = position.coords.accuracy;
 
     latElement.textContent = lat.toFixed(6);
     lonElement.textContent = lon.toFixed(6);
+    altElement.textContent = alt.toFixed(1);
     accuracyElement.textContent = accuracy.toFixed(1);
 
-    map.setView([lat, lon], 15);
-    marker.setLatLng([lat, lon]);
+    const cartesian = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+    entity.position = cartesian;
+
+    viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1500),
+        orientation: {
+            pitch: Cesium.Math.toRadians(-45)
+        }
+    });
 }
 
-function showError(error) {
-    alert("Error obteniendo ubicación.");
-}
-
-// Obtener ubicación automática
 window.onload = function () {
     getLocation();
 };
