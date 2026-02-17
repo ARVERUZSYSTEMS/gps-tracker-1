@@ -18,38 +18,37 @@ html, body, #cesiumContainer {
     overflow: hidden;
 }
 
+/* HUD LINEAL */
 .hud {
     position: absolute;
     top: 15px;
     left: 15px;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(6px);
+    background: rgba(0,0,0,0.75);
     color: #00ffcc;
-    padding: 12px 18px;
+    padding: 10px 18px;
     border-radius: 30px;
     font-family: monospace;
-    z-index: 1000;
     display: flex;
     align-items: center;
-    gap: 15px;
-}
-
-.hud span {
-    white-space: nowrap;
+    gap: 20px;
+    z-index: 1000;
 }
 
 button {
-    padding: 6px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
     border: none;
     cursor: pointer;
     font-weight: bold;
 }
 
-.ruta-btn {
-    background: #ffaa00;
+.btn-ubicar {
+    background: white;
 }
 
+.btn-ruta {
+    background: orange;
+}
 </style>
 </head>
 
@@ -58,12 +57,13 @@ button {
 <div id="cesiumContainer"></div>
 
 <div class="hud">
-    <span>📍 Lat: <span id="lat">--</span></span>
-    <span>Lng: <span id="lon">--</span></span>
-    <span>Alt: <span id="alt">--</span></span>
-    <span>Prec: <span id="accuracy">--</span> m</span>
-    <button onclick="getLocation()">Ubicar</button>
-    <button class="ruta-btn" onclick="crearRuta()">Ruta</button>
+    <span>Lat: <b id="lat">--</b></span>
+    <span>Lng: <b id="lon">--</b></span>
+    <span>Alt: <b id="alt">--</b></span>
+    <span>Prec: <b id="accuracy">--</b> m</span>
+
+    <button class="btn-ubicar" onclick="getLocation()">Ubicar</button>
+    <button class="btn-ruta" onclick="activarModoRuta()">Ruta</button>
 </div>
 
 <script src="app.js"></script>

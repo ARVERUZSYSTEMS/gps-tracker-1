@@ -2,15 +2,12 @@
 // ARVERUZ GPS 3D PRO FINAL
 // ===============================
 
-// 🔑 CESIUM TOKEN
-Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYzlkOTZhYS03ZmY2LTQ1MjItYjA0Yi02NWNiNjJiOTczYzUiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzEyOTA1MzV9.KDSNw1eDdgV1tuKnbC291EMSlpahZA_uI9fQNxEn8UQ";
-
-// 🔑 OPENROUTESERVICE API
-const ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImYwNTAyZThmNzAyZjRkZWQ5MmEzNjE5ZDkzZTMwNWZjIiwiaCI6Im11cm11cjY0In0=";
+// 🔑 TOKEN CESIUM
+Cesium.Ion.defaultAccessToken = "PEGA_AQUI_TU_TOKEN_CESIUM";
 
 // Crear visor
 const viewer = new Cesium.Viewer("cesiumContainer", {
-    terrain: Cesium.Terrain.fromWorldTerrain(),
+    terrainProvider: Cesium.createWorldTerrain(),
     timeline: false,
     animation: false,
     baseLayerPicker: true,
@@ -20,17 +17,14 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     geocoder: true
 });
 
-
 // Elementos HUD
 const latElement = document.getElementById("lat");
 const lonElement = document.getElementById("lon");
 const altElement = document.getElementById("alt");
 const accuracyElement = document.getElementById("accuracy");
 
-let posicionActual = null;
-
-// Marcador
-const entity = viewer.entities.add({
+// Marcador actual
+let entity = viewer.entities.add({
     position: Cesium.Cartesian3.fromDegrees(0, 0, 0),
     point: {
         pixelSize: 10,
@@ -38,80 +32,94 @@ const entity = viewer.entities.add({
     }
 });
 
-// Geolocalización
+let origenActual = null;
+let rutaActiva = null;
+let modoRuta = false;
+
+// ===============================
+// GEOLOCALIZACION
+// ===============================
+
 window.getLocation = function () {
-    navigator.geolocation.getCurrentPosition(function (position) {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function (position) {
 
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        const alt = position.coords.altitude || 0;
-        const accuracy = position.coords.accuracy;
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const alt = position.coords.altitude || 0;
+            const accuracy = position.coords.accuracy;
 
-        posicionActual = { lat, lon };
+            latElement.textContent = lat.toFixed(6);
+            lonElement.textContent = lon.toFixed(6);
+            altElement.textContent = alt.toFixed(1);
+            accuracyElement.textContent = accuracy.toFixed(1);
 
-        latElement.textContent = lat.toFixed(6);
-        lonElement.textContent = lon.toFixed(6);
-        altElement.textContent = alt.toFixed(1);
-        accuracyElement.textContent = accuracy.toFixed(1);
+            origenActual = { lat, lon };
 
-        const cartesian = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
-        entity.position = cartesian;
+            const cartesian = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+            entity.position = cartesian;
 
-        viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(lon, lat, 2000),
-            orientation: {
-                pitch: Cesium.Math.toRadians(-45)
-            }
+            viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(lon, lat, 2000),
+                orientation: {
+                    pitch: Cesium.Math.toRadians(-45)
+                }
+            });
+
         });
-
-    });
+    }
 };
 
-// Crear ruta hacia punto clickeado
-window.crearRuta = function () {
+// ===============================
+// ACTIVAR MODO RUTA
+// ===============================
 
-    if (!posicionActual) {
-        alert("Primero presiona UBICAR");
-        return;
+window.activarModoRuta = function () {
+    alert("Haz clic en el mapa para elegir destino");
+    modoRuta = true;
+};
+
+// Detectar click en mapa
+viewer.screenSpaceEventHandler.setInputAction(function(click) {
+
+    if (!modoRuta || !origenActual) return;
+
+    const pickedPosition = viewer.scene.pickPosition(click.position);
+    if (!pickedPosition) return;
+
+    const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
+    const destinoLat = Cesium.Math.toDegrees(cartographic.latitude);
+    const destinoLon = Cesium.Math.toDegrees(cartographic.longitude);
+
+    generarRuta(origenActual.lat, origenActual.lon, destinoLat, destinoLon);
+
+    modoRuta = false;
+
+}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+// ===============================
+// GENERAR RUTA
+// ===============================
+
+async function generarRuta(lat1, lon1, lat2, lon2) {
+
+    if (rutaActiva) {
+        viewer.entities.remove(rutaActiva);
     }
 
-    const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-
-    handler.setInputAction(async function (click) {
-
-        const cartesian = viewer.camera.pickEllipsoid(click.position);
-        const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-
-        const destino = {
-            lat: Cesium.Math.toDegrees(cartographic.latitude),
-            lon: Cesium.Math.toDegrees(cartographic.longitude)
-        };
-
-        await generarRuta(posicionActual, destino);
-
-        handler.destroy();
-
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-};
-
-async function generarRuta(origen, destino) {
-
-    const response = await fetch(
-        "https://api.openrouteservice.org/v2/directions/driving-car",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": ORS_API_KEY
-            },
-            body: JSON.stringify({
-                coordinates: [
-                    [origen.lon, origen.lat],
-                    [destino.lon, destino.lat]
-                ]
-            })
-        }
-    );
+    const response = await fetch("https://api.openrouteservice.org/v2/directions/driving-car", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "PEGA_AQUI_TU_API_KEY_OPENROUTESERVICE"
+        },
+        body: JSON.stringify({
+            coordinates: [
+                [lon1, lat1],
+                [lon2, lat2]
+            ]
+        })
+    });
 
     const data = await response.json();
     const coords = data.features[0].geometry.coordinates;
@@ -120,14 +128,14 @@ async function generarRuta(origen, destino) {
         Cesium.Cartesian3.fromDegrees(c[0], c[1])
     );
 
-    viewer.entities.add({
+    rutaActiva = viewer.entities.add({
         polyline: {
             positions: rutaPositions,
-            width: 5,
+            width: 6,
             material: Cesium.Color.YELLOW
         }
     });
 }
 
-// Auto ubicar al iniciar
+// Ubicación automática al cargar
 getLocation();
