@@ -1,13 +1,13 @@
 // ===============================
-// ARVERUZ GPS 3D - VERSION ESTABLE FINAL
+// ARVERUZ GPS 3D - VERSION ESTABLE FINAL CORREGIDA
 // ===============================
 
 // 🔑 TOKEN
 Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYzlkOTZhYS03ZmY2LTQ1MjItYjA0Yi02NWNiNjJiOTczYzUiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzEyOTA1MzV9.KDSNw1eDdgV1tuKnbC291EMSlpahZA_uI9fQNxEn8UQ";
 
-// Crear visor correctamente (VERSION NUEVA)
+// Crear visor correctamente
 const viewer = new Cesium.Viewer("cesiumContainer", {
-    terrain: Cesium.Terrain.fromWorldTerrain(),
+    terrainProvider: Cesium.createWorldTerrain(),
     timeline: false,
     animation: false,
     baseLayerPicker: true,
@@ -35,7 +35,14 @@ const entity = viewer.entities.add({
 // Función global para botón
 window.getLocation = function () {
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(showPosition);
+        navigator.geolocation.getCurrentPosition(
+            showPosition,
+            function(error) {
+                alert("Error obteniendo ubicación: " + error.message);
+            }
+        );
+    } else {
+        alert("Geolocalización no soportada.");
     }
 };
 
@@ -61,8 +68,3 @@ function showPosition(position) {
         }
     });
 }
-
-// Auto ubicar al cargar
-window.onload = function () {
-    getLocation();
-};
