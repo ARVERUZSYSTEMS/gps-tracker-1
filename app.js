@@ -36,12 +36,64 @@ async function init() {
         }
     });
 
-    // Función ubicación
-    window.getLocation = function () {
+    let watchID = null;
 
-        if (!navigator.geolocation) {
-            alert("Geolocalización no soportada.");
-            return;
+window.getLocation = function () {
+
+    if (!navigator.geolocation) {
+        alert("Geolocalización no soportada");
+        return;
+    }
+
+    if (watchID !== null) {
+        navigator.geolocation.clearWatch(watchID);
+    }
+
+    watchID = navigator.geolocation.watchPosition(pos => {
+
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const speed = pos.coords.speed || 0;
+        const heading = pos.coords.heading || 0;
+
+        latElement.textContent = lat.toFixed(6);
+        lonElement.textContent = lon.toFixed(6);
+
+        origenActual = { lat, lon };
+
+        const cart = Cesium.Cartesian3.fromDegrees(lon, lat);
+
+        entity.position = cart;
+
+        // Rotación tipo flecha
+        entity.billboard = {
+            image: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+            width: 40,
+            height: 40,
+            rotation: Cesium.Math.toRadians(heading),
+            verticalOrigin: Cesium.VerticalOrigin.CENTER
+        };
+
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1500),
+            orientation: {
+                heading: Cesium.Math.toRadians(heading),
+                pitch: Cesium.Math.toRadians(-45)
+            },
+            duration: 1
+        });
+
+    },
+    error => {
+        console.error(error);
+    },
+    {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 5000
+    });
+};
+
         }
 
         navigator.geolocation.getCurrentPosition(
