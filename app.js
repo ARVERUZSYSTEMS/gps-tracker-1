@@ -3,7 +3,7 @@
 // (sin parches, lista para producción)
 // ===============================
 
-Cesium.Ion.defaultAccessToken = CONFIG.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYzlkOTZhYS03ZmY2LTQ1MjItYjA0Yi02NWNiNjJiOTczYzUiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzEyOTA1MzV9.KDSNw1eDdgV1tuKnbC291EMSlpahZA_uI9fQNxEn8UQ;
+Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
 
 // ===== Estado global =====
 let viewer = null;
@@ -35,7 +35,7 @@ const SmoothState = {
 async function init() {
   const terrainProvider = await Cesium.createWorldTerrainAsync();
 
-  viewer = new Cesium.Viewer("cesiumContainer", {
+  viewer = new Cesium.Viewer("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3OTJlMjkyMy1kNzM4LTQxMGQtOTJiOC1mZTA5ZmQ0MjZjYzIiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzE1NDQ4NTJ9.ExQ3jypgaoz1mp4dM-Kh7XZCX8z9kGHJi76wCH5nNKY", {
     terrainProvider,
     timeline: false,
     animation: false,
