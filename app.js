@@ -1,13 +1,13 @@
 // ===============================
-// ARVERUZ GPS 3D - VERSION GITHUB PAGES ESTABLE
+// ARVERUZ NAVIGATION PRO - LIMPIO
 // ===============================
 
-// 🔑 TOKEN
-Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYzlkOTZhYS03ZmY2LTQ1MjItYjA0Yi02NWNiNjJiOTczYzUiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzEyOTA1MzV9.KDSNw1eDdgV1tuKnbC291EMSlpahZA_uI9fQNxEn8UQ"; // ← Pega tu token real aquí
+// 🔑 TOKEN CESIUM
+Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJiYzlkOTZhYS03ZmY2LTQ1MjItYjA0Yi02NWNiNjJiOTczYzUiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzEyOTA1MzV9.KDSNw1eDdgV1tuKnbC291EMSlpahZA_uI9fQNxEn8UQ";
 
+// Inicialización
 async function init() {
 
-    // Terreno correcto para Cesium 1.113
     const terrainProvider = await Cesium.createWorldTerrainAsync();
 
     const viewer = new Cesium.Viewer("cesiumContainer", {
@@ -27,9 +27,9 @@ async function init() {
     const altElement = document.getElementById("alt");
     const accuracyElement = document.getElementById("accuracy");
 
-    // Marcador
+    // Marcador inicial
     const entity = viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(0, 0, 0),
+        position: Cesium.Cartesian3.fromDegrees(0, 0),
         point: {
             pixelSize: 10,
             color: Cesium.Color.RED
@@ -38,94 +38,70 @@ async function init() {
 
     let watchID = null;
 
-window.getLocation = function () {
+    // ===============================
+    // UBICACIÓN EN TIEMPO REAL
+    // ===============================
 
-    if (!navigator.geolocation) {
-        alert("Geolocalización no soportada");
-        return;
-    }
+    window.getLocation = function () {
 
-    if (watchID !== null) {
-        navigator.geolocation.clearWatch(watchID);
-    }
-
-    watchID = navigator.geolocation.watchPosition(pos => {
-
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        const speed = pos.coords.speed || 0;
-        const heading = pos.coords.heading || 0;
-
-        latElement.textContent = lat.toFixed(6);
-        lonElement.textContent = lon.toFixed(6);
-
-        origenActual = { lat, lon };
-
-        const cart = Cesium.Cartesian3.fromDegrees(lon, lat);
-
-        entity.position = cart;
-
-        // Rotación tipo flecha
-        entity.billboard = {
-            image: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
-            width: 40,
-            height: 40,
-            rotation: Cesium.Math.toRadians(heading),
-            verticalOrigin: Cesium.VerticalOrigin.CENTER
-        };
-
-        viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1500),
-            orientation: {
-                heading: Cesium.Math.toRadians(heading),
-                pitch: Cesium.Math.toRadians(-45)
-            },
-            duration: 1
-        });
-
-    },
-    error => {
-        console.error(error);
-    },
-    {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 5000
-    });
-};
-
+        if (!navigator.geolocation) {
+            alert("Geolocalización no soportada");
+            return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-            function (position) {
+        if (watchID !== null) {
+            navigator.geolocation.clearWatch(watchID);
+        }
 
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                const alt = position.coords.altitude || 0;
-                const accuracy = position.coords.accuracy;
+        watchID = navigator.geolocation.watchPosition(
+            function (pos) {
+
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const alt = pos.coords.altitude || 0;
+                const accuracy = pos.coords.accuracy || 0;
+                const heading = pos.coords.heading || 0;
 
                 latElement.textContent = lat.toFixed(6);
                 lonElement.textContent = lon.toFixed(6);
                 altElement.textContent = alt.toFixed(1);
                 accuracyElement.textContent = accuracy.toFixed(1);
 
-                const cartesian = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
-                entity.position = cartesian;
+                const cart = Cesium.Cartesian3.fromDegrees(lon, lat);
+
+                entity.position = cart;
+
+                // Flecha tipo vehículo
+                entity.billboard = {
+                    image: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
+                    width: 40,
+                    height: 40,
+                    rotation: Cesium.Math.toRadians(heading),
+                    verticalOrigin: Cesium.VerticalOrigin.CENTER
+                };
 
                 viewer.camera.flyTo({
                     destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1500),
                     orientation: {
+                        heading: Cesium.Math.toRadians(heading),
                         pitch: Cesium.Math.toRadians(-45)
-                    }
+                    },
+                    duration: 1
                 });
 
             },
             function (error) {
-                alert("Error obteniendo ubicación: " + error.message);
+                console.error(error);
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
             }
         );
     };
 
 }
 
+// Ejecutar
 init();
