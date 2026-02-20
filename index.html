@@ -5,7 +5,6 @@
   <title>ARVERUZ GPS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- 🔥 FIX CRÍTICO PARA CESIUM CDN -->
   <script>
     window.CESIUM_BASE_URL =
       "https://cesium.com/downloads/cesiumjs/releases/1.113/Build/Cesium/";
@@ -27,28 +26,15 @@
       padding: 0;
       overflow: hidden;
     }
-
-    .debug {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      background: black;
-      color: lime;
-      padding: 10px;
-      font-family: monospace;
-      z-index: 9999;
-    }
   </style>
 </head>
 
 <body>
   <div id="cesiumContainer"></div>
 
-  <div class="debug" id="debug">
-    INITIALIZING...
-  </div>
-
+  <!-- 🔥 FORZAMOS ORDEN SIN POSIBILIDAD DE ERROR -->
   <script src="config.js"></script>
   <script src="app.js"></script>
+
 </body>
 </html>
