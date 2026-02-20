@@ -1,8 +1,5 @@
-Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
+Cesium.Ion.defaultAccessToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3OTJlMjkyMy1kNzM4LTQxMGQtOTJiOC1mZTA5ZmQ0MjZjYzIiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzE1NDQ4NTJ9.ExQ3jypgaoz1mp4dM-Kh7XZCX8z9kGHJi76wCH5nNKY";
 
-const viewer = new Cesium.Viewer("cesiumContainer", {
-  timeline: false,
-  animation: false
-});
+const viewer = new Cesium.Viewer("cesiumContainer");
 
-console.log("CESIUM OK");
+console.log("CESIUM DIRECT OK");
