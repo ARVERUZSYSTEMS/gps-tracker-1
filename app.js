@@ -2,6 +2,13 @@
 // ARVERUZ GPS – DEFINITIVE STABLE BUILD
 // ===============================
 
+/* global Cesium, CONFIG */
+
+// 🔥 ACTIVAR TOKEN ION CORRECTAMENTE
+if (CONFIG.USE_ION && CONFIG.CESIUM_TOKEN) {
+    Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
+}
+
 // 🔥 TOKEN
 Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
 
