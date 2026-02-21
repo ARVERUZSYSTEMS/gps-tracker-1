@@ -10,12 +10,17 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     terrain: Cesium.Terrain.fromWorldTerrain(),
     animation: false,
     timeline: false,
-    shouldAnimate: true
+    shouldAnimate: false
 });
 
-// VARIABLES ESTADO
+// Inicializa la cámara en una vista global bonita
+viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(-74, 40, 20000000)
+});
+
+// VARIABLES DE ESTADO
 let markerEntity = null;
-let isTracking = false;
+let watchID = null;
 
 // HUD
 const latEl = document.getElementById("lat");
@@ -24,14 +29,13 @@ const altEl = document.getElementById("alt");
 const accEl = document.getElementById("accuracy");
 
 // BOTÓN
-document.getElementById("btnTrack").addEventListener("click", toggleTracking);
+document.getElementById("btnTrack").addEventListener("click", startTracking);
 
 // ===============================
-// CREAR MARCADOR PROFESIONAL
+// MARCADOR (PUNTERO GPS)
 // ===============================
 
 function createMarker(position) {
-
     if (markerEntity) {
         viewer.entities.remove(markerEntity);
     }
@@ -40,102 +44,13 @@ function createMarker(position) {
         position: position,
         billboard: {
             image: CONFIG.MARKER_ICON,
-            scale: 0.6,
-            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-        }
-    });
-
-    return markerEntity;
-}
-
-// ===============================
-// TRACKING GPS ESTABLE
-// ===============================
-
-function toggleTracking() {
-
-    if (isTracking) {
-        stopTracking();
-    } else {
-        startTracking();
-    }
-}
-
-function startTracking() {
-
-    if (!navigator.geolocation) {
-        alert("GPS no soportado");
-        return;
-    }
-
-    isTracking = true;
-
-    navigator.geolocation.watchPosition(
-        updatePosition,
-        handleError,
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 10000
-        }
-    );
-}
-
-function stopTracking() {
-
-    isTracking = false;
-
-    viewer.trackedEntity = undefined;  // 🔥 CLAVE
-}
-
-// ===============================
-// ACTUALIZACIÓN GPS
-// ===============================
-
-function updatePosition(pos) {
-
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const alt = pos.coords.altitude || 0;
-    const acc = pos.coords.accuracy;
-
-    latEl.textContent = lat.toFixed(6);
-    lonEl.textContent = lon.toFixed(6);
-    altEl.textContent = alt.toFixed(1);
-    accEl.textContent = acc.toFixed(1);
-
-    // FILTRO DE PRECISIÓN
-    if (CONFIG.SMOOTHING.enabled && acc > CONFIG.SMOOTHING.maxAccuracyM) {
-        return;
-    }
-
-    const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
-
-    if (!markerEntity) {
-
-        function createMarker(position) {
-
-    if (markerEntity) {
-        viewer.entities.remove(markerEntity);
-    }
-
-    markerEntity = viewer.entities.add(
-
-        position: position,
-
-        // 🔥 ICONO PRINCIPAL
-        billboard: {
-            image: CONFIG.MARKER_ICON,
-            scale: 1.2,                      // 👈 MÁS GRANDE
+            scale: 1.2,
             verticalOrigin: Cesium.VerticalOrigin.CENTER,
             heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
             pixelOffset: new Cesium.Cartesian2(0, -10)
         },
-
-        // 🔥 PUNTO CENTRAL (VISIBLE SIEMPRE)
         point: {
-            pixelSize: 12,
+            pixelSize: 10,
             color: Cesium.Color.CYAN,
             outlineColor: Cesium.Color.WHITE,
             outlineWidth: 2,
@@ -145,29 +60,71 @@ function updatePosition(pos) {
 
     return markerEntity;
 }
+
+// ===============================
+// GPS TRACKING
+// ===============================
+
+function startTracking() {
+
+    if (!navigator.geolocation) {
+        alert("Geolocalización no soportada");
+        return;
+    }
+
+    if (watchID !== null) {
+        navigator.geolocation.clearWatch(watchID);
+    }
+
+    watchID = navigator.geolocation.watchPosition(
+        pos => updatePosition(pos),
+        err => console.error(err),
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 8000
+        }
+    );
+}
+
+function updatePosition(pos) {
+
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const alt = pos.coords.altitude || 0;
+    const acc = pos.coords.accuracy;
+
+    // Actualiza HUD
+    latEl.textContent = lat.toFixed(6);
+    lonEl.textContent = lon.toFixed(6);
+    altEl.textContent = alt.toFixed(1);
+    accEl.textContent = acc.toFixed(1);
+
+    const cartesian = Cesium.Cartesian3.fromDegrees(lon, lat, CONFIG.MARKER_HEIGHT);
+
+    if (!markerEntity) {
+        createMarker(cartesian);
+
+        // Centrar cámara la primera vez
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(lon, lat, CONFIG.CAMERA_HEIGHT),
+            orientation: {
+                pitch: Cesium.Math.toRadians(CONFIG.CAMERA_PITCH)
+            },
+            duration: 1.2
         });
 
     } else {
-
-        markerEntity.position = position;
+        markerEntity.position = cartesian;
     }
 }
 
 // ===============================
-// MANEJO ERRORES GPS
+// CAMERA RESTRICTIONS
 // ===============================
 
-function handleError(err) {
-
-    console.log("GPS Error:", err);
-}
-
-// ===============================
-// BLOQUEO DE CÁMARA (ANTI-COLAPSO)
-// ===============================
-
-viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50;
+viewer.scene.screenSpaceCameraController.minimumZoomDistance = 30;
 viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000;
 
-// 🔥 DESACTIVA TRACKING AUTOMÁTICO
+// Evitar track automático que entra en conflicto con zoom
 viewer.trackedEntity = undefined;
