@@ -120,7 +120,7 @@ function updatePosition(pos) {
         viewer.entities.remove(markerEntity);
     }
 
-    markerEntity = viewer.entities.add({
+    markerEntity = viewer.entities.add(
 
         position: position,
 
