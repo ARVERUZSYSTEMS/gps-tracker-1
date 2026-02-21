@@ -1,34 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <title>ARVERUZ GPS</title>
+  <meta charset="UTF-8" />
+  <title>ARVERUZ GPS PRO</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- ✅ CDN ESTABLE GLOBAL -->
-  <script src="https://cdn.jsdelivr.net/npm/cesium@1.113/Build/Cesium/Cesium.js"></script>
+  <!-- CESIUM LOCAL (ESTABLE) -->
+  <script src="Cesium/Cesium.js"></script>
+  <link href="Cesium/Widgets/widgets.css" rel="stylesheet" />
 
-  <link
-    href="https://cdn.jsdelivr.net/npm/cesium@1.113/Build/Cesium/Widgets/widgets.css"
-    rel="stylesheet"
-  />
+  <!-- ESTILOS -->
+  <link rel="stylesheet" href="style.css" />
 
-  <style>
-    html, body, #cesiumContainer {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-  </style>
+  <!-- CONFIG GLOBAL -->
+  <script src="config.js"></script>
 </head>
 
 <body>
   <div id="cesiumContainer"></div>
 
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+  <div class="hud">
+    <span>Lat: <b id="lat">--</b></span>
+    <span>Lng: <b id="lon">--</b></span>
+    <span>Alt: <b id="alt">--</b></span>
+    <span>Prec: <b id="accuracy">--</b> m</span>
 
+    <button id="btnTrack">📍 Ubicar</button>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
