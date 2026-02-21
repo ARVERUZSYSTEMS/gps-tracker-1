@@ -114,18 +114,37 @@ function updatePosition(pos) {
 
     if (!markerEntity) {
 
-        createMarker(position);
+        function createMarker(position) {
 
-        // 🔥 CÁMARA ESTABLE
-        viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(
-                lon,
-                lat,
-                CONFIG.CAMERA_HEIGHT
-            ),
-            orientation: {
-                pitch: Cesium.Math.toRadians(CONFIG.CAMERA_PITCH)
-            }
+    if (markerEntity) {
+        viewer.entities.remove(markerEntity);
+    }
+
+    markerEntity = viewer.entities.add({
+
+        position: position,
+
+        // 🔥 ICONO PRINCIPAL
+        billboard: {
+            image: CONFIG.MARKER_ICON,
+            scale: 1.2,                      // 👈 MÁS GRANDE
+            verticalOrigin: Cesium.VerticalOrigin.CENTER,
+            heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+            pixelOffset: new Cesium.Cartesian2(0, -10)
+        },
+
+        // 🔥 PUNTO CENTRAL (VISIBLE SIEMPRE)
+        point: {
+            pixelSize: 12,
+            color: Cesium.Color.CYAN,
+            outlineColor: Cesium.Color.WHITE,
+            outlineWidth: 2,
+            heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND
+        }
+    });
+
+    return markerEntity;
+}
         });
 
     } else {
