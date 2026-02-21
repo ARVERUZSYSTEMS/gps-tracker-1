@@ -1,151 +1,244 @@
-// ===============================
-// ARVERUZ GPS PRO – FULL STABLE
-// ===============================
+/* global Cesium, CONFIG */
+(function () {
+  "use strict";
 
-// TOKEN
-Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
+  // ---------- HUD ----------
+  const latEl = document.getElementById("lat");
+  const lonEl = document.getElementById("lon");
+  const altEl = document.getElementById("alt");
+  const accEl = document.getElementById("accuracy");
 
-// VIEWER
-const viewer = new Cesium.Viewer("cesiumContainer", {
-    terrain: Cesium.Terrain.fromWorldTerrain(),
+  const btnTrack = document.getElementById("btnTrack");
+  const btnRoute = document.getElementById("btnRoute");
+  const btnClear = document.getElementById("btnClear");
+
+  // ---------- Viewer (SIN ION para evitar globo morado/azul) ----------
+  const viewer = new Cesium.Viewer("cesiumContainer", {
     animation: false,
     timeline: false,
     baseLayerPicker: true,
-    shouldAnimate: true
-});
-// 🔥 MAPA BASE DEFINITIVO (ESRI – ULTRA ESTABLE)
+    geocoder: true,
+    homeButton: true,
+    navigationHelpButton: true,
+    sceneModePicker: true,
+    fullscreenButton: true,
 
-viewer.imageryLayers.removeAll();
+    // ✅ OSM gratis y estable
+    imageryProvider: new Cesium.OpenStreetMapImageryProvider({
+      url: "https://a.tile.openstreetmap.org/"
+    }),
 
-viewer.imageryLayers.addImageryProvider(
-    new Cesium.UrlTemplateImageryProvider({
-        url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-    })
-);
+    // ✅ Sin Terrain Ion (evita errores por token)
+    terrainProvider: new Cesium.EllipsoidTerrainProvider()
+  });
 
-// ESTADO
-let markerEntity = null;
-let watchId = null;
+  // Cámara estable / anti “pegada al piso”
+  const ssc = viewer.scene.screenSpaceCameraController;
+  ssc.minimumZoomDistance = 25;        // evita pegarse al suelo
+  ssc.maximumZoomDistance = 25000000;  // límite alto
 
-// HUD
-const latEl = document.getElementById("lat");
-const lonEl = document.getElementById("lon");
-const altEl = document.getElementById("alt");
-const accEl = document.getElementById("accuracy");
+  // Mejora visual básica
+  viewer.scene.globe.depthTestAgainstTerrain = false;
 
-// BOTÓN
-document.getElementById("btnTrack").addEventListener("click", toggleTracking);
+  // ---------- Estado GPS ----------
+  let watchId = null;
+  let isTracking = false;
 
-// ===============================
-// TOGGLE GPS
-// ===============================
+  // Marcador GPS
+  let gpsEntity = null;
 
-function toggleTracking() {
+  // ---------- Estado Rutas ----------
+  let routeMode = false;
+  let routeStart = null;
+  let routeEnd = null;
+  let routeEntity = null;
 
-    if (watchId) {
-        stopTracking();
-    } else {
-        startTracking();
-    }
-}
+  // ---------- Helpers ----------
+  function setHud(lat, lon, alt, acc) {
+    latEl.textContent = (lat ?? NaN).toFixed ? lat.toFixed(6) : "--";
+    lonEl.textContent = (lon ?? NaN).toFixed ? lon.toFixed(6) : "--";
+    altEl.textContent = (alt ?? NaN).toFixed ? alt.toFixed(1) : "--";
+    accEl.textContent = (acc ?? NaN).toFixed ? acc.toFixed(1) : "--";
+  }
 
-// ===============================
-// START GPS
-// ===============================
+  function ensureGpsEntity(position) {
+    if (gpsEntity) return;
 
-function startTracking() {
+    gpsEntity = viewer.entities.add({
+      name: "ARVERUZ GPS Marker",
+      position,
+      billboard: {
+        image: CONFIG.MARKER_SVG_DATAURI,
+        scale: 0.9,
+        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+        // ✅ siempre visible aunque el terreno “tape”
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      },
+      point: {
+        pixelSize: 10,
+        color: Cesium.Color.CYAN,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
+    });
+  }
 
+  function updateGpsEntity(position) {
+    ensureGpsEntity(position);
+    gpsEntity.position = position;
+  }
+
+  function flyTo(position) {
+    const carto = Cesium.Cartographic.fromCartesian(position);
+    const lon = Cesium.Math.toDegrees(carto.longitude);
+    const lat = Cesium.Math.toDegrees(carto.latitude);
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, CONFIG.CAMERA.followHeightM),
+      duration: CONFIG.CAMERA.flyToDuration
+    });
+  }
+
+  function distanceMeters(aCart, bCart) {
+    const a = Cesium.Cartographic.fromCartesian(aCart);
+    const b = Cesium.Cartographic.fromCartesian(bCart);
+    const geodesic = new Cesium.EllipsoidGeodesic(a, b);
+    return geodesic.surfaceDistance;
+  }
+
+  // ---------- GPS ----------
+  function startTracking() {
     if (!navigator.geolocation) {
-        alert("GPS no soportado");
-        return;
+      alert("Este navegador no soporta GPS (geolocation).");
+      return;
     }
+
+    // Requiere HTTPS: GitHub Pages ✅
+    isTracking = true;
+    btnTrack.textContent = "⛔ Detener";
 
     watchId = navigator.geolocation.watchPosition(
-        updatePosition,
-        handleError,
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 10000
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const alt = pos.coords.altitude || 0;
+        const acc = pos.coords.accuracy;
+
+        setHud(lat, lon, alt, acc);
+
+        // filtro precisión
+        if (CONFIG.SMOOTHING.enabled && acc > CONFIG.SMOOTHING.maxAccuracyM) return;
+
+        const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+
+        updateGpsEntity(position);
+
+        // Cámara (sin trackedEntity para evitar “rebotes” raros)
+        if (CONFIG.CAMERA.follow) {
+          flyTo(position);
         }
+      },
+      (err) => {
+        console.log("GPS Error:", err);
+        alert("GPS: no se pudo obtener ubicación. Revisa permisos del navegador.");
+        stopTracking();
+      },
+      CONFIG.GPS
     );
-}
+  }
 
-// ===============================
-// STOP GPS
-// ===============================
+  function stopTracking() {
+    isTracking = false;
+    btnTrack.textContent = "📍 Ubicar";
 
-function stopTracking() {
-
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-}
-
-// ===============================
-// UPDATE GPS
-// ===============================
-
-function updatePosition(pos) {
-
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const alt = pos.coords.altitude || 0;
-    const acc = pos.coords.accuracy;
-
-    latEl.textContent = lat.toFixed(6);
-    lonEl.textContent = lon.toFixed(6);
-    altEl.textContent = alt.toFixed(1);
-    accEl.textContent = acc.toFixed(1);
-
-    const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
-
-    if (!markerEntity) {
-
-        markerEntity = viewer.entities.add({
-
-            position: position,
-
-            billboard: {
-                image: CONFIG.MARKER_ICON,
-                scale: 1.0,
-                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-            },
-
-            point: {
-                pixelSize: 10,
-                color: Cesium.Color.CYAN,
-                outlineColor: Cesium.Color.WHITE,
-                outlineWidth: 2,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-            }
-        });
-
-        // 🔥 CÁMARA SUAVE (NO COLAPSA)
-        viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1500)
-        });
-
-    } else {
-
-        markerEntity.position = position;
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
     }
-}
+  }
 
-// ===============================
-// GPS ERROR
-// ===============================
+  function toggleTracking() {
+    if (isTracking) stopTracking();
+    else startTracking();
+  }
 
-function handleError(err) {
+  // ---------- Ruta (2 clics) ----------
+  const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
-    console.log("GPS Error:", err);
-}
+  function setRouteMode(on) {
+    routeMode = on;
+    btnRoute.textContent = on ? "✅ Ruta" : "🧭 Ruta";
+    if (on) {
+      routeStart = null;
+      routeEnd = null;
+      if (routeEntity) {
+        viewer.entities.remove(routeEntity);
+        routeEntity = null;
+      }
+      alert("Modo Ruta: haz click en el mapa para ORIGEN y luego DESTINO.");
+    }
+  }
 
-// ===============================
-// CÁMARA ESTABLE
-// ===============================
+  handler.setInputAction((movement) => {
+    if (!routeMode) return;
 
-viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50;
-viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000;
+    const cartesian = viewer.scene.pickPosition(movement.position) ||
+      viewer.camera.pickEllipsoid(movement.position, viewer.scene.globe.ellipsoid);
 
-viewer.trackedEntity = undefined;
+    if (!cartesian) return;
+
+    if (!routeStart) {
+      routeStart = cartesian;
+      return;
+    }
+
+    if (!routeEnd) {
+      routeEnd = cartesian;
+
+      const meters = distanceMeters(routeStart, routeEnd);
+      const km = meters / 1000;
+
+      routeEntity = viewer.entities.add({
+        name: "ARVERUZ Route",
+        polyline: {
+          positions: [routeStart, routeEnd],
+          width: 4,
+          material: Cesium.Color.CYAN,
+          clampToGround: false
+        }
+      });
+
+      alert(`Distancia aprox: ${km.toFixed(2)} km`);
+      setRouteMode(false);
+    }
+  }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+  // ---------- Limpiar ----------
+  function clearAll() {
+    // ruta
+    routeMode = false;
+    btnRoute.textContent = "🧭 Ruta";
+    routeStart = null;
+    routeEnd = null;
+    if (routeEntity) {
+      viewer.entities.remove(routeEntity);
+      routeEntity = null;
+    }
+
+    // gps (no lo borro si estás trackeando)
+    if (gpsEntity && !isTracking) {
+      viewer.entities.remove(gpsEntity);
+      gpsEntity = null;
+      setHud(null, null, null, null);
+    }
+  }
+
+  // ---------- Eventos UI ----------
+  btnTrack.addEventListener("click", toggleTracking);
+  btnRoute.addEventListener("click", () => setRouteMode(!routeMode));
+  btnClear.addEventListener("click", clearAll);
+
+  // Inicial HUD
+  setHud(null, null, null, null);
+})();
