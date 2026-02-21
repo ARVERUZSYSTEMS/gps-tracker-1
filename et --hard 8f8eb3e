@@ -1,0 +1,50 @@
+[33mce68fbc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m FIX PLANET TEXTURE
+[33m8f8eb3e[m ARVERUZ FINAL CAMERA + GPS FIX
+[33mec8e910[m CESIUM BASIC TEST
+[33ma7fe2f6[m FIX MAP + GPS POINTER
+[33m09e0d86[m ARVERUZ GPS MARKER VISIBILITY FIX
+[33m6d14e0a[m ARVERUZ GPS MARKER VISIBILITY FIX
+[33mcbc32b4[m ARVERUZ CAMERA STABILITY FIX
+[33m42dc8f5[m ARVERUZ GPS FULL BUILD
+[33mbae9096[m FIX REAL GPS MARKER
+[33mf9d367e[m FINAL FIX CONFIG + CESIUM
+[33meee7c61[m FIX duplicated config file
+[33me92e649[m FIX CESIUM CDN STABLE
+[33mc0b7e3e[m FIX SCRIPT EXECUTION ORDER
+[33m983684a[m CESIUM DEFINITIVE BUILD
+[33m0d7fead[m FULL CLEAN RESET
+[33md867220[m FIX CESIUM BASE URL CDN
+[33mac35c68[m FIX CESIUM CONTAINER SIZE
+[33m825c5f7[m FIX DOM TIMING
+[33m178e255[m FIX JS STRUCTURE
+[33m9c3fcb5[m LIMPIA APP.JS NAVEGACION REAL
+[33m8f33f23[m LIMPIA APP.JS NAVEGACION REAL
+[33m9f40483[m LIMPIA APP.JS NAVEGACION REAL
+[33m8299af7[m LIMPIA APP.JS NAVEGACION REAL
+[33m4649281[m LIMPIA APP.JS NAVEGACION REAL
+[33mb6e3813[m Fix: terrain async compatible GitHub Pages
+[33m1e5226e[m Fix: terrain async compatible GitHub Pages
+[33m9504a88[m Fix: app.js corregido terrainProvider estable
+[33me0fec23[m Fix: index corregido con config.js y orden correcto
+[33m60bd94f[m Fix: renombrando config js a config.js correctamente
+[33mde31069[m CORRIGE TERRENO VERSION NUEVA
+[33m9ee15f2[m Actualizacion completa PRO
+[33m2fc768d[m Correccion definitiva terrain Cesium
+[33m4f97284[m VERSION GPS PRO COMPLETA
+[33m2b40264[m Reset limpio definitivo
+[33me2cad20[m FIX TERRAIN CESIUM DEFINITIVO
+[33mdeba736[m VERSION DEFINITIVA LIMPIA
+[33mc3aff3f[m Restaurando index.html correcto
+[33m8496616[m Versión estable Cesium 3D corregida
+[33mc94beec[m Cesium funcional con token integrado
+[33md0172af[m Corrección API Cesium y eliminación config.js
+[33m00af267[m Limpieza total y versión pura Cesium
+[33mf13d6e6[m Eliminando archivo config js incorrecto
+[33m09ee75c[m Migración real a Cesium 3D
+[33m807fccb[m Protegiendo config.js correctamente
+[33md01c2a8[m Protegiendo config.js correctamente
+[33mc99060b[m Mapa con capas satélite y modo oscuro
+[33m9c54016[m Versión PRO completa con zoom táctil
+[33m822bf8c[m Inicialización correcta del mapa
+[33m1758663[m Mapa pantalla completa con Leaflet
+[33mc71de30[m Initial commit - GPS Tracker 1.0

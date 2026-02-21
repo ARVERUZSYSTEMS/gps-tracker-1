@@ -3,11 +3,18 @@
 // ===============================
 
 Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
-
 const viewer = new Cesium.Viewer("cesiumContainer", {
+
     terrain: Cesium.Terrain.fromWorldTerrain(),
+
+    imageryProvider: new Cesium.IonImageryProvider({
+        assetId: 2   // 🔥 Bing Maps / Satélite estándar
+    }),
+
     animation: false,
-    timeline: false
+    timeline: false,
+    shouldAnimate: true
+
 });
 
 // 🔥 FIX CRÍTICO → TEXTURA PLANETA
