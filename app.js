@@ -1,201 +1,266 @@
 // ===============================
-// ARVERUZ GPS – DEFINITIVE STABLE BUILD
+// ARVERUZ GPS PRO – STABLE (NO ION)
+// Map: OpenStreetMap
+// Geocode: Nominatim
+// Route: OSRM
 // ===============================
 
-/* global Cesium, CONFIG */
+(function () {
+  "use strict";
 
-// 🔥 ACTIVAR TOKEN ION CORRECTAMENTE
-if (CONFIG.USE_ION && CONFIG.CESIUM_TOKEN) {
-    Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
-}
+  // ---------- DOM ----------
+  const latEl = document.getElementById("lat");
+  const lonEl = document.getElementById("lon");
+  const altEl = document.getElementById("alt");
+  const accEl = document.getElementById("accuracy");
 
-// 🔥 TOKEN
-Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
+  const btnTrack = document.getElementById("btnTrack");
+  const btnRoute = document.getElementById("btnRoute");
+  const btnClear = document.getElementById("btnClear");
 
-// ===============================
-// VIEWER ESTABLE
-// ===============================
-
-const viewer = new Cesium.Viewer("cesiumContainer", {
-
-    terrain: Cesium.Terrain.fromWorldTerrain(),
-
+  // ---------- VIEWER (SIN ION) ----------
+  // OJO: terrain Ion = problemas de token. Por eso lo apagamos.
+  const viewer = new Cesium.Viewer("cesiumContainer", {
     animation: false,
     timeline: false,
-    baseLayerPicker: true,
     geocoder: true,
+    baseLayerPicker: true,
+    sceneModePicker: true,
+    navigationHelpButton: true,
+    homeButton: true,
+    fullscreenButton: true,
+    infoBox: false,
+    selectionIndicator: false,
+    shouldAnimate: true,
 
-    shouldAnimate: true
-});
+    imageryProvider: new Cesium.OpenStreetMapImageryProvider({
+      url: "https://a.tile.openstreetmap.org/"
+    }),
 
-// ===============================
-// ESTABILIDAD VISUAL (CRÍTICO)
-// ===============================
+    // Evita errores de Ion por terrain:
+    terrainProvider: new Cesium.EllipsoidTerrainProvider()
+  });
 
-// 🔥 ESTO EVITA GLOBO AZUL / MORADO
-viewer.scene.globe.baseColor = Cesium.Color.BLACK;
+  // Cámara estable (evita “pegarse” al suelo)
+  viewer.scene.screenSpaceCameraController.minimumZoomDistance = 25;
+  viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000;
 
-// 🔥 ILUMINACIÓN ESTABLE
-viewer.scene.globe.enableLighting = false;
+  // ---------- ESTADO GPS ----------
+  let watchId = null;
+  let tracking = false;
+  let marker = null;
+  let firstFix = true;
 
-// 🔥 PROFUNDIDAD CORRECTA
-viewer.scene.globe.depthTestAgainstTerrain = true;
+  // RUTA
+  let routeEntity = null;
+  let routePoints = []; // para paradas
 
-// ===============================
-// CONTROL DE CÁMARA (ANTI-LOCO)
-// ===============================
+  // ---------- HELPERS ----------
+  function safeText(el, value, fallback = "--") {
+    el.textContent = (value === null || value === undefined || Number.isNaN(value)) ? fallback : value;
+  }
 
-viewer.scene.screenSpaceCameraController.minimumZoomDistance = 80;
-viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000;
+  function setHud(lat, lon, alt, acc) {
+    if (typeof lat === "number") safeText(latEl, lat.toFixed(6)); else safeText(latEl, "--");
+    if (typeof lon === "number") safeText(lonEl, lon.toFixed(6)); else safeText(lonEl, "--");
+    if (typeof alt === "number") safeText(altEl, alt.toFixed(1)); else safeText(altEl, "--");
+    if (typeof acc === "number") safeText(accEl, acc.toFixed(1)); else safeText(accEl, "--");
+  }
 
-// 🔥 DESACTIVA TRACKING AUTOMÁTICO
-viewer.trackedEntity = undefined;
+  function makeMarker(position) {
+    if (marker) viewer.entities.remove(marker);
 
-// ===============================
-// VARIABLES ESTADO
-// ===============================
+    // Punto + “anillo” para que se vea SIEMPRE
+    marker = viewer.entities.add({
+      position,
+      point: {
+        pixelSize: 12,
+        color: Cesium.Color.CYAN,
+        outlineColor: Cesium.Color.WHITE,
+        outlineWidth: 2,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      },
+      ellipse: {
+        semiMajorAxis: 20.0,
+        semiMinorAxis: 20.0,
+        material: Cesium.Color.CYAN.withAlpha(0.20),
+        outline: true,
+        outlineColor: Cesium.Color.CYAN.withAlpha(0.8),
+        height: 0,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
+      }
+    });
 
-let markerEntity = null;
-let watchId = null;
-let isTracking = false;
+    return marker;
+  }
 
-// ===============================
-// HUD ELEMENTS
-// ===============================
+  function flyToPosition(position) {
+    // Acerca a nivel “calle” sin pegarse al suelo
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.clone(position),
+      orientation: {
+        heading: viewer.camera.heading,
+        pitch: Cesium.Math.toRadians(-55),
+        roll: 0
+      },
+      duration: 1.2
+    });
+  }
 
-const latEl = document.getElementById("lat");
-const lonEl = document.getElementById("lon");
-const altEl = document.getElementById("alt");
-const accEl = document.getElementById("accuracy");
-
-const btnTrack = document.getElementById("btnTrack");
-
-btnTrack.addEventListener("click", toggleTracking);
-
-// ===============================
-// TOGGLE TRACKING
-// ===============================
-
-function toggleTracking() {
-
-    if (isTracking) {
-        stopTracking();
-    } else {
-        startTracking();
-    }
-}
-
-// ===============================
-// START GPS
-// ===============================
-
-function startTracking() {
-
+  // ---------- GPS ----------
+  function startTracking() {
     if (!navigator.geolocation) {
-        alert("GPS no soportado en este dispositivo");
-        return;
+      alert("Este navegador no soporta geolocalización.");
+      return;
     }
 
-    isTracking = true;
-
-    btnTrack.textContent = "🛑 Detener";
+    tracking = true;
+    firstFix = true;
+    btnTrack.textContent = "⛔ Detener";
 
     watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const alt = (typeof pos.coords.altitude === "number") ? pos.coords.altitude : 0;
+        const acc = pos.coords.accuracy;
 
-        updatePosition,
-        handleError,
+        setHud(lat, lon, alt, acc);
 
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 15000
+        const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+
+        if (!marker) makeMarker(position);
+        else marker.position = position;
+
+        // Solo en el primer fix acercamos cámara (después NO molestamos tu zoom)
+        if (firstFix) {
+          firstFix = false;
+          flyToPosition(position);
         }
+      },
+      (err) => {
+        console.log("GPS Error:", err);
+        alert("No se pudo obtener GPS. Revisa permisos de ubicación.");
+        stopTracking();
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 }
     );
-}
+  }
 
-// ===============================
-// STOP GPS
-// ===============================
-
-function stopTracking() {
-
-    isTracking = false;
-
+  function stopTracking() {
+    tracking = false;
     btnTrack.textContent = "📍 Ubicar";
 
     if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
     }
-}
+  }
 
-// ===============================
-// UPDATE POSITION – BLINDADA
-// ===============================
+  // ---------- GEOCODE (Nominatim) ----------
+  async function geocodeAddress(address) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+    const res = await fetch(url, {
+      headers: {
+        // Nominatim recomienda identificar app; si bloquea, lo ajustamos.
+        "Accept": "application/json"
+      }
+    });
+    if (!res.ok) throw new Error("Geocode falló");
+    const data = await res.json();
+    if (!data || !data[0]) throw new Error("Dirección no encontrada");
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  }
 
-function updatePosition(pos) {
+  // ---------- ROUTE (OSRM) ----------
+  async function routeOSRM(pointsLonLat) {
+    // pointsLonLat: [{lon,lat}, ...]
+    const coords = pointsLonLat.map(p => `${p.lon},${p.lat}`).join(";");
+    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Ruta falló");
+    const data = await res.json();
+    if (!data.routes || !data.routes[0]) throw new Error("No se pudo calcular ruta");
+    return data.routes[0].geometry.coordinates; // [[lon,lat], ...]
+  }
 
-    if (!pos || !pos.coords) return;
+  function drawRoute(coordsLonLat) {
+    if (routeEntity) viewer.entities.remove(routeEntity);
 
-    const lat = pos.coords.latitude;
-    const lon = pos.coords.longitude;
-    const alt = pos.coords.altitude ?? 0;
-    const acc = pos.coords.accuracy ?? 0;
+    const positions = coordsLonLat.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat, 0));
 
-    if (lat == null || lon == null) return;
+    routeEntity = viewer.entities.add({
+      polyline: {
+        positions,
+        width: 6,
+        material: Cesium.Color.CYAN,
+        clampToGround: true
+      }
+    });
 
-    // ===============================
-    // HUD SAFE UPDATE
-    // ===============================
+    viewer.zoomTo(routeEntity);
+  }
 
-    latEl.textContent = lat.toFixed(6);
-    lonEl.textContent = lon.toFixed(6);
-    altEl.textContent = alt.toFixed(1);
-    accEl.textContent = acc.toFixed(1);
+  // ---------- BOTONES ----------
+  btnTrack.addEventListener("click", () => {
+    if (!tracking) startTracking();
+    else stopTracking();
+  });
 
-    const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+  btnClear.addEventListener("click", () => {
+    stopTracking();
+    setHud(null, null, null, null);
 
-    // ===============================
-    // CREAR MARCADOR ESTABLE
-    // ===============================
-
-    if (!markerEntity) {
-
-        markerEntity = viewer.entities.add({
-
-            position: position,
-
-            // 🔥 PUNTERO PROFESIONAL (NUNCA FALLA)
-            point: {
-                pixelSize: 14,
-                color: Cesium.Color.CYAN,
-                outlineColor: Cesium.Color.WHITE,
-                outlineWidth: 2,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
-            }
-        });
-
-        // 🔥 VUELO DE CÁMARA SOLO PRIMER FIX
-        viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1500)
-        });
-
-    } else {
-
-        // 🔥 MOVIMIENTO SUAVE
-        markerEntity.position = position;
+    if (marker) {
+      viewer.entities.remove(marker);
+      marker = null;
     }
-}
-
-// ===============================
-// GPS ERROR HANDLER
-// ===============================
-
-function handleError(err) {
-
-    console.log("GPS Error:", err);
-
-    if (err.code === err.PERMISSION_DENIED) {
-        alert("Permiso de GPS denegado");
+    if (routeEntity) {
+      viewer.entities.remove(routeEntity);
+      routeEntity = null;
     }
-}
+    routePoints = [];
+  });
+
+  btnRoute.addEventListener("click", async () => {
+    try {
+      const from = prompt("Dirección de INICIO (ej: 3500 N Walden St, Aurora, CO):");
+      if (!from) return;
+
+      const to = prompt("Dirección de DESTINO:");
+      if (!to) return;
+
+      const stopsRaw = prompt("Paradas intermedias (opcional). Sepáralas con |  (ej: parada1 | parada2 | parada3):") || "";
+      const stops = stopsRaw
+        .split("|")
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      // Geocode
+      const start = await geocodeAddress(from);
+      const end = await geocodeAddress(to);
+
+      const stopCoords = [];
+      for (const s of stops) stopCoords.push(await geocodeAddress(s));
+
+      // Orden: start -> stops -> end
+      const pts = [{ lon: start.lon, lat: start.lat }, ...stopCoords.map(p => ({ lon: p.lon, lat: p.lat })), { lon: end.lon, lat: end.lat }];
+
+      const line = await routeOSRM(pts);
+      drawRoute(line);
+    } catch (e) {
+      console.log(e);
+      alert("No se pudo generar la ruta. (Puede ser bloqueo temporal del servicio o dirección inválida).");
+    }
+  });
+
+  // ---------- ESTADO INICIAL ----------
+  setHud(null, null, null, null);
+
+  // Un “home” bonito (Denver aprox) para no quedar en estrellas
+  viewer.camera.setView({
+    destination: Cesium.Cartesian3.fromDegrees(-104.9903, 39.7392, 25000),
+    orientation: { pitch: Cesium.Math.toRadians(-55) }
+  });
+
+})();

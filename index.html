@@ -5,20 +5,11 @@
   <title>ARVERUZ GPS PRO</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- ✅ CRÍTICO para Cesium local -->
-  <script>
-    window.CESIUM_BASE_URL = "./Cesium/";
-  </script>
-
   <!-- CESIUM LOCAL -->
-  <script src="./Cesium/Cesium.js"></script>
-  <link rel="stylesheet" href="./Cesium/Widgets/widgets.css" />
+  <script src="Cesium/Cesium.js"></script>
+  <link href="Cesium/Widgets/widgets.css" rel="stylesheet" />
 
-  <!-- ESTILOS -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- CONFIG -->
-  <script src="config.js"></script>
 </head>
 
 <body>
@@ -30,9 +21,9 @@
     <span>Alt: <b id="alt">--</b></span>
     <span>Prec: <b id="accuracy">--</b> m</span>
 
-    <button id="btnTrack" type="button">📍 Ubicar</button>
-    <button id="btnRoute" type="button">🧭 Ruta</button>
-    <button id="btnClear" type="button">🧹 Limpiar</button>
+    <button id="btnTrack">📍 Ubicar</button>
+    <button id="btnRoute">🧭 Ruta</button>
+    <button id="btnClear">🧹 Limpiar</button>
   </div>
 
   <script src="app.js"></script>
