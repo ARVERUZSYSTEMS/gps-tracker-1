@@ -2,14 +2,9 @@ const CONFIG = {
 
   CESIUM_TOKEN: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3OTJlMjkyMy1kNzM4LTQxMGQtOTJiOC1mZTA5ZmQ0MjZjYzIiLCJpZCI6MzkwOTAyLCJpYXQiOjE3NzE1NDQ4NTJ9.ExQ3jypgaoz1mp4dM-Kh7XZCX8z9kGHJi76wCH5nNKY",
 
-  CAMERA_HEIGHT: 1200,
+  CAMERA_HEIGHT: 1500,
   CAMERA_PITCH: -35,
 
-  MARKER_HEIGHT: 10,
-
-  SMOOTHING: {
-    enabled: true,
-    alphaPos: 0.18,
-    minMoveM: 0.7
-  }
+  MARKER_HEIGHT: 15,
+   MARKER_ICON: "https://cdn-icons-png.flaticon.com/512/684/684908.png"
 };
