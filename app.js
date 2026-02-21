@@ -14,11 +14,13 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     shouldAnimate: true
 });
 
-// 🔥 FORZAR IMAGERY BASE (ANTI GLOBO MORADO)
+// 🔥 MAPA BASE DEFINITIVO (SIN ION / SIN MORADO)
 viewer.imageryLayers.removeAll();
 
 viewer.imageryLayers.addImageryProvider(
-    new Cesium.IonImageryProvider({ assetId: 2 }) // Bing Maps / World Imagery
+    new Cesium.OpenStreetMapImageryProvider({
+        url: "https://a.tile.openstreetmap.org/"
+    })
 );
 
 // ESTADO
