@@ -13,13 +13,13 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     baseLayerPicker: true,
     shouldAnimate: true
 });
+// 🔥 MAPA BASE DEFINITIVO (ESRI – ULTRA ESTABLE)
 
-// 🔥 MAPA BASE DEFINITIVO (SIN ION / SIN MORADO)
 viewer.imageryLayers.removeAll();
 
 viewer.imageryLayers.addImageryProvider(
-    new Cesium.OpenStreetMapImageryProvider({
-        url: "https://a.tile.openstreetmap.org/"
+    new Cesium.UrlTemplateImageryProvider({
+        url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
     })
 );
 
