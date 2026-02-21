@@ -1,30 +1,21 @@
 // ===============================
-// ARVERUZ GPS PRO
+// ARVERUZ GPS – FULL STABLE BUILD
 // ===============================
 
-// TOKEN SEGURO
+// TOKEN
 Cesium.Ion.defaultAccessToken = CONFIG.CESIUM_TOKEN;
 
-// VIEWER ESTABLE
+// VIEWER
 const viewer = new Cesium.Viewer("cesiumContainer", {
     terrain: Cesium.Terrain.fromWorldTerrain(),
+    animation: false,
     timeline: false,
-    animation: false
+    shouldAnimate: true
 });
 
-// CAMARA GLOBAL INICIAL (EVITA PANTALLA NEGRA)
-viewer.camera.setView({
-    destination: Cesium.Cartesian3.fromDegrees(-74, 40, 20000000)
-});
-
-// ===============================
-// VARIABLES
-// ===============================
-let gpsEntity;
-let watchId;
-
-let waypoints = [];
-let routeLine;
+// VARIABLES ESTADO
+let markerEntity = null;
+let isTracking = false;
 
 // HUD
 const latEl = document.getElementById("lat");
@@ -32,152 +23,132 @@ const lonEl = document.getElementById("lon");
 const altEl = document.getElementById("alt");
 const accEl = document.getElementById("accuracy");
 
-// ===============================
-// GPS MARKER
-// ===============================
-gpsEntity = viewer.entities.add({
-    position: Cesium.Cartesian3.fromDegrees(0, 0),
-    point: {
-        pixelSize: 14
-    }
-});
+// BOTÓN
+document.getElementById("btnTrack").addEventListener("click", toggleTracking);
 
 // ===============================
-// SMOOTHING
+// CREAR MARCADOR PROFESIONAL
 // ===============================
-let lastPosition;
 
-function smoothPosition(newPos) {
-    if (!lastPosition) {
-        lastPosition = newPos;
-        return newPos;
+function createMarker(position) {
+
+    if (markerEntity) {
+        viewer.entities.remove(markerEntity);
     }
 
-    return Cesium.Cartesian3.lerp(
-        lastPosition,
-        newPos,
-        CONFIG.SMOOTHING.alphaPos,
-        new Cesium.Cartesian3()
-    );
+    markerEntity = viewer.entities.add({
+        position: position,
+        billboard: {
+            image: CONFIG.MARKER_ICON,
+            scale: 0.6,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND
+        }
+    });
+
+    return markerEntity;
 }
 
 // ===============================
-// GPS TRACKING
+// TRACKING GPS ESTABLE
 // ===============================
-function startGPS() {
+
+function toggleTracking() {
+
+    if (isTracking) {
+        stopTracking();
+    } else {
+        startTracking();
+    }
+}
+
+function startTracking() {
 
     if (!navigator.geolocation) {
-        alert("GPS no disponible");
+        alert("GPS no soportado");
         return;
     }
 
-    watchId = navigator.geolocation.watchPosition(position => {
+    isTracking = true;
 
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        const alt = position.coords.altitude || 0;
-        const acc = position.coords.accuracy;
-
-        latEl.textContent = lat.toFixed(6);
-        lonEl.textContent = lon.toFixed(6);
-        altEl.textContent = alt.toFixed(1);
-        accEl.textContent = acc.toFixed(1);
-
-        const rawPos = Cesium.Cartesian3.fromDegrees(
-            lon,
-            lat,
-            CONFIG.MARKER_HEIGHT
-        );
-
-        const smoothPos = smoothPosition(rawPos);
-
-        const moveDistance = lastPosition
-            ? Cesium.Cartesian3.distance(lastPosition, smoothPos)
-            : 999;
-
-        if (moveDistance > CONFIG.SMOOTHING.minMoveM) {
-            gpsEntity.position = smoothPos;
-
-            viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(
-                    lon,
-                    lat,
-                    CONFIG.CAMERA_HEIGHT
-                ),
-                orientation: {
-                    pitch: Cesium.Math.toRadians(CONFIG.CAMERA_PITCH)
-                },
-                duration: 0.6
-            });
-
-            lastPosition = smoothPos;
+    navigator.geolocation.watchPosition(
+        updatePosition,
+        handleError,
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
         }
-
-    }, error => {
-        console.log(error);
-    }, {
-        enableHighAccuracy: true
-    });
+    );
 }
 
-// BOTON
-document.getElementById("btnTrack").onclick = startGPS;
+function stopTracking() {
 
-// ===============================
-// WAYPOINT SYSTEM
-// ===============================
-const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+    isTracking = false;
 
-handler.setInputAction(click => {
-
-    const cartesian = viewer.scene.pickPosition(click.position);
-
-    if (!cartesian) return;
-
-    waypoints.push(cartesian);
-
-    viewer.entities.add({
-        position: cartesian,
-        point: {
-            pixelSize: 10
-        }
-    });
-
-    updateRoute();
-
-}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-// LIMPIAR RUTA
-handler.setInputAction(() => {
-
-    waypoints = [];
-
-    viewer.entities.removeAll();
-
-    gpsEntity = viewer.entities.add({
-        position: lastPosition || Cesium.Cartesian3.fromDegrees(0, 0),
-        point: {
-            pixelSize: 14
-        }
-    });
-
-    routeLine = null;
-
-}, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-
-// ===============================
-// ROUTE LINE
-// ===============================
-function updateRoute() {
-
-    if (routeLine) viewer.entities.remove(routeLine);
-
-    if (waypoints.length < 2) return;
-
-    routeLine = viewer.entities.add({
-        polyline: {
-            positions: waypoints,
-            width: 3
-        }
-    });
+    viewer.trackedEntity = undefined;  // 🔥 CLAVE
 }
+
+// ===============================
+// ACTUALIZACIÓN GPS
+// ===============================
+
+function updatePosition(pos) {
+
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+    const alt = pos.coords.altitude || 0;
+    const acc = pos.coords.accuracy;
+
+    latEl.textContent = lat.toFixed(6);
+    lonEl.textContent = lon.toFixed(6);
+    altEl.textContent = alt.toFixed(1);
+    accEl.textContent = acc.toFixed(1);
+
+    // FILTRO DE PRECISIÓN
+    if (CONFIG.SMOOTHING.enabled && acc > CONFIG.SMOOTHING.maxAccuracyM) {
+        return;
+    }
+
+    const position = Cesium.Cartesian3.fromDegrees(lon, lat, alt);
+
+    if (!markerEntity) {
+
+        createMarker(position);
+
+        // 🔥 CÁMARA ESTABLE
+        viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(
+                lon,
+                lat,
+                CONFIG.CAMERA_HEIGHT
+            ),
+            orientation: {
+                pitch: Cesium.Math.toRadians(CONFIG.CAMERA_PITCH)
+            }
+        });
+
+    } else {
+
+        markerEntity.position = position;
+    }
+}
+
+// ===============================
+// MANEJO ERRORES GPS
+// ===============================
+
+function handleError(err) {
+
+    console.log("GPS Error:", err);
+}
+
+// ===============================
+// BLOQUEO DE CÁMARA (ANTI-COLAPSO)
+// ===============================
+
+viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50;
+viewer.scene.screenSpaceCameraController.maximumZoomDistance = 20000000;
+
+// 🔥 DESACTIVA TRACKING AUTOMÁTICO
+viewer.trackedEntity = undefined;
